@@ -18,6 +18,9 @@ class AppState(TypedDict):
     # Node 2 output
     rewritten_resume: str
 
+    # Node 2b output (LaTeX source for PDF export)
+    latex_source: str
+
     # Guardrail outputs (run after Node 2)
     fabrication_result: Optional[GuardrailResult]
     tone_result: Optional[GuardrailResult]
@@ -41,6 +44,7 @@ def initial_state(job_description: str, original_resume: str) -> AppState:
         original_resume=original_resume,
         gap_analysis="",
         rewritten_resume="",
+        latex_source="",
         fabrication_result=None,
         tone_result=None,
         ats_result=None,

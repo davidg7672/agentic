@@ -8,8 +8,9 @@ Paste/upload a job description (or drop a URL) and your resume. The agent runs s
 
 1. **Gap Analyzer** — finds missing skills and experience mismatches
 2. **Resume Rewriter** — tailors your resume bullets to the JD (no fabrication)
-3. **Cover Letter Drafter** — writes a targeted 3-paragraph cover letter
-4. **Interview Question Predictor** — predicts 10 likely questions with rationale
+3. **LaTeX Generator** — converts the rewritten resume to typeset LaTeX for PDF export
+4. **Cover Letter Drafter** — writes a properly formatted business letter (header, date, salutation, 3 paragraphs, closing)
+5. **Interview Question Predictor** — predicts 10 likely questions with rationale
 
 After the resume rewrite, three guardrails run automatically:
 - **Fabrication Detector** — LLM-as-judge that flags any skills/credentials added that weren't in your original resume
@@ -18,6 +19,16 @@ After the resume rewrite, three guardrails run automatically:
 
 Guardrails are warn-and-continue — they never block output, just surface warnings inline.
 
+## Downloads
+
+All outputs are exportable from the UI:
+
+| Output | Formats |
+|---|---|
+| Tailored resume | PDF (compiled LaTeX via tectonic), DOCX |
+| Cover letter | PDF, DOCX |
+| Interview prep | DOCX |
+
 ## Stack
 
 | Layer | Tech |
@@ -25,6 +36,8 @@ Guardrails are warn-and-continue — they never block output, just surface warni
 | Agent framework | LangGraph 1.1 (`StateGraph`) |
 | LLM | Anthropic Claude Sonnet 4.6 (direct SDK, no LangChain wrappers) |
 | UI | Streamlit (sync `.stream()` — no async/event loop conflicts) |
+| PDF compilation | tectonic (LaTeX → PDF) |
+| DOCX generation | python-docx |
 | ATS check | `rank-bm25` (zero LLM calls) |
 | Doc parsing | PyMuPDF, python-docx, requests + BeautifulSoup |
 
@@ -37,6 +50,9 @@ pip install -r requirements.txt
 cp .env.example .env
 # Add your ANTHROPIC_API_KEY to .env
 
+# PDF export requires tectonic (LaTeX compiler)
+brew install tectonic   # macOS
+
 streamlit run app.py
 ```
 
@@ -47,9 +63,9 @@ app.py          # Streamlit UI entry point
 graph.py        # LangGraph StateGraph — wires all nodes and edges
 state.py        # AppState TypedDict — shared state flowing through all nodes
 
-nodes/          # The 4 main agent steps
+nodes/          # The 5 main agent steps
 guardrails/     # The 3 validation nodes (run after resume rewrite)
-utils/          # LLM client singleton and document parser
+utils/          # LLM client, document parser, PDF and DOCX exporters
 ```
 
 ## Supported job description inputs
@@ -65,4 +81,5 @@ LinkedIn URLs are blocked by LinkedIn and won't work — paste the text instead.
 - **No FastAPI backend** — Streamlit calls `graph.stream()` synchronously. Each section renders as its node completes.
 - **Single LLM provider** — Anthropic only. One API key, no version drift between provider wrappers.
 - **Guardrails as graph nodes** — not inline validators. They run unconditionally and write warnings to state; the pipeline always continues.
-- **Fabrication guardrail is layered** — the resume rewriter prompt itself says "do not invent"; the guardrail is the second independent check.
+- **Fabrication guardrail is layered** — the resume rewriter prompt itself says "do not invent"; the guardrail is the independent second check.
+- **LaTeX for resume PDF** — tectonic compiles the LaTeX source to a clean single-page PDF; skill rows are post-processed in Python to prevent horizontal overflow.

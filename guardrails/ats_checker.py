@@ -35,12 +35,13 @@ def ats_checker_node(state: AppState) -> dict:
 
         if not jd_tokens or not resume_tokens:
             result: GuardrailResult = {"passed": True, "issues": [], "severity": "warning"}
-            return {"ats_result": result, "guardrail_warnings": warnings}
+            return {
+                "ats_result": result,
+                "guardrail_warnings": warnings,
+                "current_step": "guardrail_ats_complete",
+            }
 
-        # BM25 with single-document corpus (the resume)
         bm25 = BM25Okapi([resume_tokens])
-
-        # Deduplicated JD keywords
         jd_keywords = list(dict.fromkeys(jd_tokens))
 
         missing = []
@@ -51,8 +52,6 @@ def ats_checker_node(state: AppState) -> dict:
 
         missing_ratio = len(missing) / len(jd_keywords) if jd_keywords else 0
         passed = missing_ratio <= MISSING_THRESHOLD
-
-        # Surface only top missing keywords (up to 10) to avoid noise
         top_missing = missing[:10]
 
         result: GuardrailResult = {
@@ -67,7 +66,11 @@ def ats_checker_node(state: AppState) -> dict:
                 f"({missing_ratio:.0%} missing). Top missing: {', '.join(top_missing)}"
             )
 
-        return {"ats_result": result, "guardrail_warnings": warnings}
+        return {
+            "ats_result": result,
+            "guardrail_warnings": warnings,
+            "current_step": "guardrail_ats_complete",
+        }
 
     except Exception as e:
         print(f"[ats_checker] error: {e}", file=sys.stderr)
@@ -77,4 +80,8 @@ def ats_checker_node(state: AppState) -> dict:
             "issues": ["Guardrail check failed — treat output with caution."],
             "severity": "warning",
         }
-        return {"ats_result": result, "guardrail_warnings": warnings}
+        return {
+            "ats_result": result,
+            "guardrail_warnings": warnings,
+            "current_step": "guardrail_ats_complete",
+        }

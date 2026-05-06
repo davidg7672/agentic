@@ -37,7 +37,7 @@ def test_cover_letter_uses_correct_max_tokens(base_state):
     with patch("nodes.cover_letter.call_claude", return_value=LLM_RESPONSE) as mock_llm:
         cover_letter_node(base_state)
 
-    assert mock_llm.call_args[1]["max_tokens"] == 700
+    assert mock_llm.call_args[1]["max_tokens"] == 900
 
 
 # ---------------------------------------------------------------------------

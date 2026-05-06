@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from state import AppState, GuardrailResult
 from utils.llm_client import call_claude
@@ -37,6 +38,20 @@ OR if fabrications are found:
 """
 
 
+def _extract_json(raw: str) -> dict:
+    """Parse JSON from LLM response, stripping markdown code fences if present."""
+    text = raw.strip()
+    # Strip ```json ... ``` or ``` ... ``` fences
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*```$", "", text)
+    text = text.strip()
+    # As a last resort, find the first {...} block in the response
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        return json.loads(match.group())
+    return json.loads(text)
+
+
 def fabrication_detector_node(state: AppState) -> dict:
     warnings = list(state.get("guardrail_warnings", []))
 
@@ -51,10 +66,10 @@ def fabrication_detector_node(state: AppState) -> dict:
         raw = call_claude(SYSTEM, user_msg, max_tokens=500)
 
         try:
-            parsed = json.loads(raw)
+            parsed = _extract_json(raw)
             fabrications = parsed.get("fabrications", [])
             verdict = parsed.get("verdict", "clean")
-        except json.JSONDecodeError as json_err:
+        except (json.JSONDecodeError, ValueError) as json_err:
             print(f"[fabrication_detector] JSON parse error: {json_err}", file=sys.stderr)
             warnings.append("[Fabrication Check] Could not parse guardrail response — treat output with caution.")
             result: GuardrailResult = {
@@ -62,7 +77,11 @@ def fabrication_detector_node(state: AppState) -> dict:
                 "issues": ["Guardrail response was unparseable — treat output with caution."],
                 "severity": "warning",
             }
-            return {"fabrication_result": result, "guardrail_warnings": warnings}
+            return {
+                "fabrication_result": result,
+                "guardrail_warnings": warnings,
+                "current_step": "guardrail_fabrication_complete",
+            }
 
         passed = verdict == "clean"
         result: GuardrailResult = {
@@ -75,7 +94,11 @@ def fabrication_detector_node(state: AppState) -> dict:
             for item in fabrications:
                 warnings.append(f"[Fabrication] {item}")
 
-        return {"fabrication_result": result, "guardrail_warnings": warnings}
+        return {
+            "fabrication_result": result,
+            "guardrail_warnings": warnings,
+            "current_step": "guardrail_fabrication_complete",
+        }
 
     except Exception as e:
         print(f"[fabrication_detector] error: {e}", file=sys.stderr)
@@ -85,4 +108,8 @@ def fabrication_detector_node(state: AppState) -> dict:
             "issues": ["Guardrail check failed — treat output with caution."],
             "severity": "warning",
         }
-        return {"fabrication_result": result, "guardrail_warnings": warnings}
+        return {
+            "fabrication_result": result,
+            "guardrail_warnings": warnings,
+            "current_step": "guardrail_fabrication_complete",
+        }

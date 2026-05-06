@@ -11,6 +11,7 @@ STRICT RULES — these are non-negotiable:
 4. You MAY reword existing bullets to better reflect the language used in the job description.
 5. You MAY reorder sections or bullets to lead with the most relevant experience.
 6. You MAY strengthen action verbs and quantify achievements only if the numbers already exist in the original.
+7. In experience bullet points and personal project descriptions, wrap key terms and technologies that appear in the job description with **double asterisks** (e.g. **machine learning**, **RESTful API development**). Do NOT use **double asterisks** anywhere in the Skills section — leave skills as plain text.
 
 Output the complete rewritten resume, preserving the original structure and sections."""
 

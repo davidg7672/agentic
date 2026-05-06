@@ -34,3 +34,33 @@ Handles all input formats for job descriptions and resumes.
 **PDF parsing:** PyMuPDF (`import fitz`) — fast C-backed extraction. Note: installs as `pymupdf` but imports as `fitz`.
 
 **DOCX parsing:** `python-docx` — extracts paragraph text, skips empty paragraphs.
+
+### `pdf_exporter.py`
+Compiles LaTeX source to PDF bytes using `tectonic`.
+
+| Function | Input | Output |
+|---|---|---|
+| `resume_to_pdf(latex_source)` | Complete LaTeX string | PDF bytes |
+| `cover_letter_to_pdf(letter_text)` | Plain/markdown text | PDF bytes |
+
+`resume_to_pdf` writes the LaTeX to a temp file, invokes tectonic, and reads back the compiled PDF. Raises `RuntimeError` on compilation failure.
+
+`cover_letter_to_pdf` wraps the letter text in a minimal LaTeX document (1in margins, 10.5pt) and compiles it. Markdown bold/italic markers are stripped before escaping so `**text**` renders as plain text rather than literal asterisks.
+
+Requires `tectonic` on `$PATH` — install with `brew install tectonic` on macOS.
+
+### `docx_exporter.py`
+Generates `.docx` files from resume and cover letter text.
+
+| Function | Input | Output |
+|---|---|---|
+| `resume_to_docx(resume_text)` | Markdown-formatted resume string | DOCX bytes |
+| `cover_letter_to_docx(letter_text)` | Plain/markdown text | DOCX bytes |
+
+`resume_to_docx` parses markdown conventions used by the resume rewriter:
+- `# Name` → centered 18pt bold name
+- `## SECTION` → bold section header with bottom rule
+- `- bullet` → indented list item
+- `**Company** | Location` style lines → two-column entry with right-aligned tab
+
+`cover_letter_to_docx` splits on double newlines and renders each block as a paragraph with 12pt spacing, parsing inline `**bold**` and `*italic*` markdown.

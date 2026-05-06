@@ -45,9 +45,8 @@ def tone_enforcer_node(state: AppState) -> dict:
 
         issues = []
         if not passed:
-            lines = raw.splitlines()
             in_issues = False
-            for line in lines:
+            for line in raw.splitlines():
                 if line.strip() == "ISSUES:":
                     in_issues = True
                     continue
@@ -64,7 +63,11 @@ def tone_enforcer_node(state: AppState) -> dict:
             for item in issues:
                 warnings.append(f"[Tone] {item}")
 
-        return {"tone_result": result, "guardrail_warnings": warnings}
+        return {
+            "tone_result": result,
+            "guardrail_warnings": warnings,
+            "current_step": "guardrail_tone_complete",
+        }
 
     except Exception as e:
         print(f"[tone_enforcer] error: {e}", file=sys.stderr)
@@ -74,4 +77,8 @@ def tone_enforcer_node(state: AppState) -> dict:
             "issues": ["Guardrail check failed — treat output with caution."],
             "severity": "warning",
         }
-        return {"tone_result": result, "guardrail_warnings": warnings}
+        return {
+            "tone_result": result,
+            "guardrail_warnings": warnings,
+            "current_step": "guardrail_tone_complete",
+        }

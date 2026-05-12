@@ -32,23 +32,35 @@ def _apply_markdown_bold(latex: str) -> str:
 
 
 def _trim_skillrows(latex: str) -> str:
-    """Drop individual skills that would make a single row absurdly long.
-
-    tabularx wraps multi-skill rows automatically, so trimming is only a
-    last-resort guard against a single skill name wider than the whole page.
-    Budget: ~86 printable characters across the full text width (7.2 in at
-    10 pt) minus the label length so each remaining token fits on one wrapped
-    line at minimum.
-    """
-    PAGE_CHARS = 86
+    # Enforce single-line constraint for each \skillrow.
+    # Text width = 7.2 in; at 10pt ~90 printable chars across the full line.
+    # Bold labels are ~10% wider, so their effective char cost is label_len * 1.1.
+    # Skills are ordered by relevance (most relevant first) — trimming from the
+    # end drops the least-relevant skills for the position being applied to.
+    LINE_BUDGET = 90
 
     def _trim(m: re.Match) -> str:
-        label, skills = m.group(1), m.group(2)
-        budget = PAGE_CHARS - len(label)
-        parts = [s.strip() for s in skills.split("|")]
-        kept = [p for p in parts if len(p) <= budget]
-        if len(kept) == len(parts):
+        label, skills_str = m.group(1), m.group(2)
+        parts = [s.strip() for s in skills_str.split("|") if s.strip()]
+
+        skills_budget = LINE_BUDGET - round(len(label) * 1.1)
+
+        kept: list[str] = []
+        used = 0
+        for part in parts:
+            cost = len(part) + (3 if kept else 0)  # " | " separator = 3 chars
+            if used + cost <= skills_budget:
+                kept.append(part)
+                used += cost
+            else:
+                break  # skills are relevance-ordered; stop here
+
+        if not kept and parts:
+            kept = [parts[0]]  # always keep at least one skill
+
+        if kept == parts:
             return m.group(0)
+
         return rf"\skillrow{{{label}}}{{{' | '.join(kept)}}}"
 
     return re.sub(r"\\skillrow\{([^}]+)\}\{([^}]+)\}", _trim, latex)
@@ -138,7 +150,7 @@ minor side-projects, then reduce bullets to 2 per role/project. Never cut Educat
 6. Use | (plain pipe) as a separator in skill and contact lines — not $|$.
 7. Do NOT invent or add any content not present in the resume.
 8. Section headers must be uppercase: \\section*{{EDUCATION}}, \\section*{{RELEVANT SKILLS}}, etc.
-9. RELEVANT SKILLS section MUST use \\skillrow{{Label:}}{{skills}} for every skill line — never plain \\textbf{{}} with a trailing \\\\. Long skill lists wrap automatically within the right margin; do NOT split one row into two to handle length.
+9. RELEVANT SKILLS section MUST use \\skillrow{{Label:}}{{skills}} for every skill line — never plain \\textbf{{}} with a trailing \\\\. Order skills within each \\skillrow by relevance to the job description (most relevant first). Do NOT split one row into two. Include all skills for each category — the layout engine trims to exactly one line, keeping the most relevant.
 10. The resume text may contain **double-asterisk** wrapped phrases (markdown bold). Convert each \
 **phrase** to \\textbf{{phrase}} in LaTeX — but ONLY inside TECHNICAL EXPERIENCE and PERSONAL \
 PROJECTS sections. Never apply \\textbf{{}} to anything inside RELEVANT SKILLS or ADDITIONAL SKILLS.

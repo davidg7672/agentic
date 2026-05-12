@@ -181,6 +181,7 @@ if run_button:
     # 8 nodes, progress advances as each completes
     STEP_LABELS = [
         "Gap Analysis",
+        "Fit Score",
         "Resume Rewrite",
         "Fabrication Check",
         "Tone Check",
@@ -190,14 +191,15 @@ if run_button:
         "Interview Questions",
     ]
     STEP_MAP = {
-        "gap_analysis_complete":        0,
-        "resume_rewritten":             1,
-        "guardrail_fabrication_complete": 2,
-        "guardrail_tone_complete":      3,
-        "guardrail_ats_complete":       4,
-        "latex_generated":              5,
-        "cover_letter_drafted":         6,
-        "complete":                     7,
+        "gap_analysis_complete":          0,
+        "fit_scored":                     1,
+        "resume_rewritten":               2,
+        "guardrail_fabrication_complete": 3,
+        "guardrail_tone_complete":        4,
+        "guardrail_ats_complete":         5,
+        "latex_generated":                6,
+        "cover_letter_drafted":           7,
+        "complete":                       8,
     }
 
     progress_bar = st.progress(0, text="Starting analysis…")
@@ -269,6 +271,45 @@ if run_button:
 
 if st.session_state.step == "complete" and st.session_state.result:
     result = st.session_state.result
+
+    # ── Fit Score ─────────────────────────────────────────────────────────────
+    fit = result.get("fit_score")
+    if fit:
+        overall = fit["overall"]
+        tier = fit["tier"]
+        rec = fit.get("apply_recommendation", "")
+        confidence = fit.get("confidence", "")
+
+        if overall >= 75:
+            badge_color = "green"
+        elif overall >= 60:
+            badge_color = "orange"
+        else:
+            badge_color = "red"
+
+        st.markdown(
+            f"<h2 style='margin-bottom:4px'>Job Fit Score: "
+            f"<span style='color:{badge_color}'>{overall} — {tier}</span></h2>",
+            unsafe_allow_html=True,
+        )
+        if rec:
+            st.markdown(f"**Recommendation:** {rec}")
+
+        breakdown = fit.get("breakdown", {})
+        if breakdown:
+            rows = []
+            for category, data in breakdown.items():
+                label = category.replace("_", " ").title()
+                score = data.get("score", "—")
+                weight = int(data.get("weight", 0) * 100)
+                rows.append(f"| {label} | {score} | {weight}% |")
+            table = "| Category | Score | Weight |\n|---|---|---|\n" + "\n".join(rows)
+            with st.expander("Score breakdown"):
+                st.markdown(table)
+                if confidence:
+                    st.caption(f"Confidence: {confidence}")
+
+        st.divider()
 
     # ── Gap Analysis ──────────────────────────────────────────────────────────
     st.subheader("Gap Analysis")

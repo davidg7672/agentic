@@ -2,6 +2,7 @@ from langgraph.graph import StateGraph, START, END
 
 from state import AppState
 from nodes.gap_analyzer import gap_analyzer_node
+from nodes.fit_scorer import fit_scorer_node
 from nodes.resume_rewriter import resume_rewriter_node
 from nodes.latex_generator import latex_generator_node
 from nodes.cover_letter import cover_letter_node
@@ -16,6 +17,7 @@ def build_graph():
 
     # Main agent nodes
     builder.add_node("gap_analyzer", gap_analyzer_node)
+    builder.add_node("fit_scorer", fit_scorer_node)
     builder.add_node("resume_rewriter", resume_rewriter_node)
     builder.add_node("cover_letter_drafter", cover_letter_node)
     builder.add_node("interview_predictor", interview_predictor_node)
@@ -29,7 +31,8 @@ def build_graph():
     # Pipeline:
     # gap → rewrite → [fabrication → tone → ats] → latex → cover letter → interview
     builder.add_edge(START, "gap_analyzer")
-    builder.add_edge("gap_analyzer", "resume_rewriter")
+    builder.add_edge("gap_analyzer", "fit_scorer")
+    builder.add_edge("fit_scorer", "resume_rewriter")
     builder.add_edge("resume_rewriter", "fabrication_detector")
     builder.add_edge("fabrication_detector", "tone_enforcer")
     builder.add_edge("tone_enforcer", "ats_checker")

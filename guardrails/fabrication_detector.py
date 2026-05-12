@@ -1,8 +1,7 @@
-import json
-import re
 import sys
 from state import AppState, GuardrailResult
 from utils.llm_client import call_claude
+from utils.json_helpers import extract_json
 
 SYSTEM = """You are a strict fact-checker comparing a rewritten resume against the original source resume.
 Your job is to identify fabrications: skills, tools, certifications, job titles, companies, dates,
@@ -38,20 +37,6 @@ OR if fabrications are found:
 """
 
 
-def _extract_json(raw: str) -> dict:
-    """Parse JSON from LLM response, stripping markdown code fences if present."""
-    text = raw.strip()
-    # Strip ```json ... ``` or ``` ... ``` fences
-    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s*```$", "", text)
-    text = text.strip()
-    # As a last resort, find the first {...} block in the response
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        return json.loads(match.group())
-    return json.loads(text)
-
-
 def fabrication_detector_node(state: AppState) -> dict:
     warnings = list(state.get("guardrail_warnings", []))
 
@@ -66,7 +51,7 @@ def fabrication_detector_node(state: AppState) -> dict:
         raw = call_claude(SYSTEM, user_msg, max_tokens=500)
 
         try:
-            parsed = _extract_json(raw)
+            parsed = extract_json(raw)
             fabrications = parsed.get("fabrications", [])
             verdict = parsed.get("verdict", "clean")
         except (json.JSONDecodeError, ValueError) as json_err:

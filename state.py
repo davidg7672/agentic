@@ -7,6 +7,14 @@ class GuardrailResult(TypedDict):
     severity: str  # "warning" | "error"
 
 
+class FitScore(TypedDict):
+    overall: int
+    tier: str
+    breakdown: dict
+    apply_recommendation: str
+    confidence: str  # "high" | "medium" | "low"
+
+
 class AppState(TypedDict):
     # Inputs
     job_description: str
@@ -14,6 +22,9 @@ class AppState(TypedDict):
 
     # Node 1 output
     gap_analysis: str
+
+    # Node 1b output
+    fit_score: Optional[FitScore]
 
     # Node 2 output
     rewritten_resume: str
@@ -43,6 +54,7 @@ def initial_state(job_description: str, original_resume: str) -> AppState:
         job_description=job_description,
         original_resume=original_resume,
         gap_analysis="",
+        fit_score=None,
         rewritten_resume="",
         latex_source="",
         fabrication_result=None,
